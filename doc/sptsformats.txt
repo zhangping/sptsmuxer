@@ -13,5 +13,7 @@ pcr pid, shall be same as video pid. pcr interval shall < 40ms?
 cbr or abr
 
 gop size
+--------
+need fixed gop size. x264enc's i_scenecut_threshold parameter set to 0.
 
 pat and pmt interval is the idr interval.
