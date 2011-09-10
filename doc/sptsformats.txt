@@ -1,0 +1,17 @@
+must be single program transport stream
+
+descriptor about mux rate, in pat.
+
+pmt pid
+
+video pid
+
+audio pids
+
+pcr pid, shall be same as video pid. pcr interval shall < 40ms?
+
+cbr or abr
+
+gop size
+
+pat and pmt interval is the idr interval.

@@ -1,0 +1,13 @@
+sptsmuxer: Single program transport stream muxer
+
+WHAT IT IS
+----------
+1. Single program transport stream muxer.
+2. An element of gstreamer.
+3. support H.264 and AAC.
+4. The ts stream is self indexed, can be random accessed without index file.
+5. Can generate fast forward and rewinding ts stream on the fly.
+
+HOW TO USE IT
+-------------
+gst-launch-0.10 --gst-plugin-path=src/.libs alsasrc device=hw:1 ! audio/x-raw-int,rate=44100 ! queue ! faac outputformat=1 ! queue ! sptsmuxer name=muxer pushbufsize=7 ! udpsink host=192.168.0.152 port=12345 v4l2src ! video/x-raw-yuv,width=720 ! queue ! x264enc byte-stream=true threads=4 key-int-max=10 ! queue ! muxer.
