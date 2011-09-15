@@ -14,6 +14,11 @@ cbr or abr
 
 gop size
 --------
-need fixed gop size. x264enc's i_scenecut_threshold parameter set to 0.
+need fixed gop size, x264enc's i_scenecut_threshold parameter set to 0, should modify x264enc plugin source.
+
+CBR parameter
+-------------
+use x264enc gstreamer plugin:
+bitrate=1200 bframes=1 qp-min=1 qp-max=51 qp-step=50 vbv-buf-capacity=300
 
 pat and pmt interval is the idr interval.
