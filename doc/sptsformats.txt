@@ -21,6 +21,6 @@ CBR parameter
 use x264enc gstreamer plugin as following:
 bitrate=1200 bframes=1 qp-min=1 qp-max=51 qp-step=50 vbv-buf-capacity=300
 
-max gop is 1799 ts packets, and the average is 1567 ts packets (1567*188*8/2s=1178384bps).
+the max gop size is 1799 ts packets, the average gop size is 1568 ts packets (1568*188*8/2s=1179136bps).
 
 pat and pmt interval is the idr interval.
