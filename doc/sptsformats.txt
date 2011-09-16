@@ -18,7 +18,9 @@ need fixed gop size, x264enc's i_scenecut_threshold parameter set to 0, should m
 
 CBR parameter
 -------------
-use x264enc gstreamer plugin:
+use x264enc gstreamer plugin as following:
 bitrate=1200 bframes=1 qp-min=1 qp-max=51 qp-step=50 vbv-buf-capacity=300
+
+max gop is 1799 ts packets, and the average is 1567 ts packets (1567*188*8/2s=1178384bps).
 
 pat and pmt interval is the idr interval.
