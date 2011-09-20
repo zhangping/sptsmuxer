@@ -23,4 +23,9 @@ bitrate=1200 bframes=1 qp-min=1 qp-max=51 qp-step=50 vbv-buf-capacity=300
 
 the max gop size is 1799 ts packets, the average gop size is 1568 ts packets (1568*188*8/2s=1179136bps).
 
+cctv13, the result is:
+video packets per gop: 1575, max: 1810
+audio packets per gop: 231, max: 261
+
 pat and pmt interval is the idr interval.
+----------------------------------------
