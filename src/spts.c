@@ -292,6 +292,10 @@ void spts_add_stream (SpTs *spts, guint8 stream_type, guint16 stream_pid)
   stream->pes_header_info.pes_header_data_length = 0x05;
   stream->pes_header_info.pes_header_flag = 0x8080;
   stream->packets_counter = 0;
+  stream->last_gop_packets_counter = 0;
+  stream->max_gop_packets = 0;
+  stream->frames_counter = 0;
+  stream->last_gop_frames_counter = 0;
 
   if (stream_type == STREAM_TYPE_VIDEO_H264) {
     stream->pes_header_info.stream_id = STREAM_ID_VIDEO;
@@ -347,9 +351,23 @@ gboolean spts_write_frame (SpTs *spts, GstBuffer *buffer)
   s = gst_caps_get_structure (caps, 0);
   if (gst_structure_has_name (s, "video/x-h264")) {
     stream = spts->video_stream;
+    stream->frames_counter++;
     if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_DELTA_UNIT)) {
       /* IDR found and GOP complete, insert null packet if necessary, inster psi */
       spts_psi_write (spts);
+      GST_DEBUG ("gop : %lld; frame: %lld; packets counter: %lld; max gop: %lld", spts->gop_counter, stream->frames_counter - stream->last_gop_frames_counter, stream->packets_counter - stream->last_gop_packets_counter, stream->max_gop_packets);
+      if (spts->gop_counter != 0) {
+        GST_DEBUG ("packets per gop: %lld, max: %lld", stream->packets_counter/(spts->gop_counter), stream->max_gop_packets);
+        GST_DEBUG ("audio packets per gop %lld, max: %lld", spts->audio_stream->packets_counter/spts->gop_counter, spts->audio_stream->max_gop_packets);
+      }
+      spts->gop_counter++;
+      stream->last_gop_frames_counter = stream->frames_counter;
+      if (stream->packets_counter - stream->last_gop_packets_counter > stream->max_gop_packets)
+        stream->max_gop_packets = stream->packets_counter - stream->last_gop_packets_counter;
+      stream->last_gop_packets_counter = stream->packets_counter;
+      if (spts->audio_stream->packets_counter - spts->audio_stream->last_gop_packets_counter > spts->audio_stream->max_gop_packets)
+        spts->audio_stream->max_gop_packets = spts->audio_stream->packets_counter - spts->audio_stream->last_gop_packets_counter;
+      spts->audio_stream->last_gop_packets_counter = spts->audio_stream->packets_counter;
     }
   } else if (gst_structure_has_name (s, "audio/mpeg")) {
     if (spts->packets_counter == 0) {

@@ -130,8 +130,12 @@ struct _TsPacketAdaptationInfo {
 struct _SpTsStream {
   TsPacketHeaderInfo tspacket_header_info;
   guint8 tspacket[TSPACKET_LENGTH];
-  gboolean pcr_reference;
-  guint64 packets_counter;
+  gboolean pcr_reference; /* is the stream pcr reference? */
+  guint64 packets_counter; /* counter of ts packets of the stream */
+  guint64 last_gop_packets_counter; /* counter of ts packets from begain to last gop */
+  guint64 max_gop_packets; /* max gop ts packets */
+  guint64 frames_counter; /* frames counter of the stream */
+  guint64 last_gop_frames_counter; /* counter of frames from begain to last gop */
   PESHeaderInfo pes_header_info;
 };
 
