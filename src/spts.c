@@ -78,6 +78,9 @@ static void spts_psi_pat_init (SpTs *spts);
 /* initialize pmt: ts packet header and section header */
 static void spts_psi_pmt_init (SpTs *spts);
 
+/* null packet initialize */
+static void spts_null_packet_init (SpTs *spts);
+
 /* write out psi packet, pat and pmt */
 static void spts_psi_write (SpTs *spts);
 
@@ -99,6 +102,7 @@ SpTs * spts_new (void)
 
   spts->audio_stream = NULL;
   spts->video_stream = NULL;
+  spts_null_packet_init (spts);
 
   return spts;
 }
@@ -269,6 +273,18 @@ static void spts_psi_pmt_init (SpTs *spts)
   psi_pmt_section_init (&(spts->pmt_section), PROGRAM_NUMBER);
 }
 
+static void spts_null_packet_init (SpTs *spts)
+{
+  guint8 *buf;
+
+  buf = spts->nullpacket;
+  *buf++ = 0x47;
+  *buf++ = 0x1f;
+  *buf++ = 0xff;
+  *buf++ = 0x10;
+  memset (buf, 0xff, TSPACKET_LENGTH-4);
+}
+
 static void spts_psi_write (SpTs *spts)
 {
   spts->write_func (spts->pat->data, TSPACKET_LENGTH, spts->write_func_data);
@@ -354,6 +370,7 @@ gboolean spts_write_frame (SpTs *spts, GstBuffer *buffer)
     stream->frames_counter++;
     if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_DELTA_UNIT)) {
       /* IDR found and GOP complete, insert null packet if necessary, inster psi */
+      spts->write_func (spts->nullpacket, TSPACKET_LENGTH, spts->write_func_data);
       spts_psi_write (spts);
       GST_DEBUG ("gop : %lld; frame: %lld; packets counter: %lld; max gop: %lld", spts->gop_counter, stream->frames_counter - stream->last_gop_frames_counter, stream->packets_counter - stream->last_gop_packets_counter, stream->max_gop_packets);
       if (spts->gop_counter != 0) {

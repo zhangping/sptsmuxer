@@ -146,6 +146,7 @@ struct _SpTs {
   /* pmt and pat is together */
   TsPacket *pat;
   TsPacket *pmt_tspacket;
+  guint8 nullpacket[TSPACKET_LENGTH];
   PsiPmtSection pmt_section;
   SpTsStream *audio_stream;
   SpTsStream *video_stream;
