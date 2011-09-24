@@ -10,4 +10,4 @@ WHAT IT IS
 
 HOW TO USE IT
 -------------
-gst-launch-0.10 --gst-plugin-path=src/.libs alsasrc device=hw:1 ! audio/x-raw-int,rate=44100 ! queue ! faac outputformat=1 ! queue ! sptsmuxer name=muxer pushbufsize=7 ! udpsink host=192.168.0.152 port=12345 v4l2src ! video/x-raw-yuv,width=720 ! queue ! x264enc byte-stream=true threads=4 key-int-max=10 ! queue ! muxer.
+gst-launch-0.10 --gst-plugin-path=src/.libs alsasrc device=hw:1 ! audio/x-raw-int,rate=44100 ! queue ! faac outputformat=1 ! queue ! sptsmuxer name=muxer pushbufsize=7 ! udpsink host=192.168.0.152 port=12345 v4l2src ! video/x-raw-yuv,width=720 ! queue ! x264enc byte-stream=true threads=0 key-int-max=50 bitrate=1200 bframes=1 qp-min=1 qp-max=51 qp-step=50 vbv-buf-capacity=300 ! queue ! muxer.
