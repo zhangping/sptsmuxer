@@ -103,6 +103,8 @@ SpTs * spts_new (void)
   spts->audio_stream = NULL;
   spts->video_stream = NULL;
   spts_null_packet_init (spts);
+  spts->packets_counter = 0;
+  spts->gop_counter = 0;
 
   return spts;
 }
@@ -370,9 +372,17 @@ gboolean spts_write_frame (SpTs *spts, GstBuffer *buffer)
     stream->frames_counter++;
     if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_DELTA_UNIT)) {
       /* IDR found and GOP complete, insert null packet if necessary, inster psi */
-      spts->write_func (spts->nullpacket, TSPACKET_LENGTH, spts->write_func_data);
+      GST_DEBUG ("total packets: %lld; gop : %lld; frame: %lld; current gop packets: %lld; max gop packets: %lld",
+                 spts->packets_counter,
+                 spts->gop_counter,
+                 stream->frames_counter - stream->last_gop_frames_counter,
+                 stream->packets_counter - stream->last_gop_packets_counter,
+                 stream->max_gop_packets);
+      while (spts->packets_counter < spts->gop_counter * (1830+270+2)) {
+        spts->write_func (spts->nullpacket, TSPACKET_LENGTH, spts->write_func_data);
+        spts->packets_counter++;
+      }
       spts_psi_write (spts);
-      GST_DEBUG ("gop : %lld; frame: %lld; packets counter: %lld; max gop: %lld", spts->gop_counter, stream->frames_counter - stream->last_gop_frames_counter, stream->packets_counter - stream->last_gop_packets_counter, stream->max_gop_packets);
       if (spts->gop_counter != 0) {
         GST_DEBUG ("packets per gop: %lld, max: %lld", stream->packets_counter/(spts->gop_counter), stream->max_gop_packets);
         GST_DEBUG ("audio packets per gop %lld, max: %lld", spts->audio_stream->packets_counter/spts->gop_counter, spts->audio_stream->max_gop_packets);
@@ -388,7 +398,7 @@ gboolean spts_write_frame (SpTs *spts, GstBuffer *buffer)
     }
   } else if (gst_structure_has_name (s, "audio/mpeg")) {
     if (spts->packets_counter == 0) {
-      spts_psi_write (spts);
+      return TRUE; /* it should be video frame at the begaining */
     }
     stream = spts->audio_stream;
   }
@@ -442,7 +452,7 @@ gboolean spts_write_frame (SpTs *spts, GstBuffer *buffer)
   }
 
   stream->packets_counter++;
-  //stream->video_packets_counter++;
+  spts->packets_counter++;
   spts_tspacket_header_cc_inc (stream->tspacket);
  
   spts_tspacket_header_set_adaptation_field_control (stream->tspacket, ADAPTATION_FIELD_PAYLOAD_ONLY);
@@ -467,7 +477,7 @@ gboolean spts_write_frame (SpTs *spts, GstBuffer *buffer)
       buf += tspacket_payload_size;
     }
     stream->packets_counter++;
-    //spts->video_packets_counter++;
+    spts->packets_counter++;
     spts_tspacket_header_cc_inc (stream->tspacket);
     tspacket_payload_size = TSPACKET_PAYLOAD_LENGTH;
   }
