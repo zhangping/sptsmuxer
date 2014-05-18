@@ -90,13 +90,14 @@ static GstStaticPadTemplate src_factory =
                      "packetsize = (int) { 188 }")
     );
 
-GST_BOILERPLATE (SpTsMuxer, sptsmuxer, GstElement, GST_TYPE_ELEMENT);
+G_DEFINE_TYPE (SpTsMuxer, sptsmuxer, GST_TYPE_ELEMENT);
 
 static void sptsmuxer_set_property (GObject * object, guint prop_id, const GValue * value, GParamSpec * pspec);
 static void sptsmuxer_get_property (GObject * object, guint prop_id, GValue * value, GParamSpec * pspec);
 static gboolean sptsmuxer_push_packet_cb (guint8 * data, guint len, void *write_func_data);
 static GstFlowReturn sptsmuxer_collected (GstCollectPads * pads, SpTsMuxer * muxer);
-static GstPad *sptsmuxer_request_new_pad (GstElement *element, GstPadTemplate *templ, const gchar *name);
+static GstPad *sptsmuxer_request_new_pad (GstElement *element,
+    GstPadTemplate *templ, const gchar *name, const GstCaps *caps);
 static gboolean sptsmuxer_srcpad_setcaps (SpTsMuxer *muxer);
 static GstStateChangeReturn sptsmuxer_change_state (GstElement *element, GstStateChange transition);
 
@@ -150,7 +151,7 @@ sptsmuxer_class_init (SpTsMuxerClass * klass)
  * instantiate pads and add them to element
  */
 static void
-sptsmuxer_init (SpTsMuxer * muxer, SpTsMuxerClass * gclass)
+sptsmuxer_init (SpTsMuxer * muxer)
 {
   muxer->collect = gst_collect_pads_new ();
   gst_collect_pads_set_function (muxer->collect,
@@ -204,7 +205,8 @@ sptsmuxer_get_property (GObject * object, guint prop_id, GValue * value, GParamS
 }
 
 /* Called when the SpTs has prepared a packet for output. Return FALSE on error and TRUE on success */
-static gboolean sptsmuxer_push_packet_cb (guint8 * data, guint len, void *write_func_data)
+static gboolean
+sptsmuxer_push_packet_cb (guint8 * data, guint len, void *write_func_data)
 {
   GstBuffer *buf;
   SpTsMuxer *muxer = (SpTsMuxer *)write_func_data;
@@ -229,11 +231,14 @@ static gboolean sptsmuxer_push_packet_cb (guint8 * data, guint len, void *write_
   } 
 
   if (muxer->pushbufused == muxer->pushbufsize) {
+    GstMapInfo map;
+
     buf = gst_buffer_new_and_alloc (muxer->pushbufsize * TSPACKET_LENGTH);
-    memcpy (GST_BUFFER_DATA (buf), pushbuf, muxer->pushbufsize * TSPACKET_LENGTH);
-    if (G_UNLIKELY (buf == NULL)) {
-      return FALSE;
-    }
+    gst_buffer_map (buf, &map, GST_MAP_READ);
+    data = map.data;
+    //gst_adapter_copy (mux->out_adapter, data, 0, av);
+    //gst_adapter_clear (mux->out_adapter);
+
     gst_pad_push (muxer->srcpad, buf);
     muxer->pushbufused = 0;
   }
@@ -300,7 +305,9 @@ static GstFlowReturn sptsmuxer_collected (GstCollectPads * pads, SpTsMuxer * mux
   return GST_FLOW_OK;
 }
 
-static GstPad *sptsmuxer_request_new_pad (GstElement *element, GstPadTemplate *templ, const gchar *name)
+static GstPad *
+sptsmuxer_request_new_pad (GstElement *element, GstPadTemplate *templ,
+    const gchar *name, const GstCaps *caps)
 {
   SpTsMuxer *muxer = SPTSMUXER(element);
   GstElementClass *klass = GST_ELEMENT_GET_CLASS (element);
@@ -323,7 +330,9 @@ static GstPad *sptsmuxer_request_new_pad (GstElement *element, GstPadTemplate *t
   pad = gst_pad_new_from_template (templ, pad_name);
   g_free (pad_name);  
 
-  collect_data = (SpTsMuxerCollectData *) gst_collect_pads_add_pad (muxer->collect, pad, sizeof (SpTsMuxerCollectData));
+  collect_data = (SpTsMuxerCollectData *)
+      gst_collect_pads_add_pad (muxer->collect, pad, sizeof (SpTsMuxerCollectData),
+      (GstCollectDataDestroyNotify) (NULL), TRUE);
   if (collect_data == NULL) {
     GST_ERROR_OBJECT (element, "Internal error, could not add pad to collect pads");
     return NULL;
@@ -337,12 +346,15 @@ static GstPad *sptsmuxer_request_new_pad (GstElement *element, GstPadTemplate *t
   return pad;
 }
 
-static gboolean sptsmuxer_srcpad_setcaps (SpTsMuxer *muxer)
+static gboolean
+sptsmuxer_srcpad_setcaps (SpTsMuxer *muxer)
 {
+  GstSegment seg;
   GstEvent *newsegment;
   GstCaps *caps;
 
-  newsegment = gst_event_new_new_segment (FALSE, 1.0, GST_FORMAT_BYTES, 0, -1, 0);
+  gst_segment_init (&seg, GST_FORMAT_TIME);
+  newsegment = gst_event_new_segment (&seg);
   caps = gst_caps_new_simple ("video/mpegts", "systemstream",
       G_TYPE_BOOLEAN, TRUE,
       "packetsize", G_TYPE_INT,
@@ -379,7 +391,7 @@ static GstStateChangeReturn sptsmuxer_change_state (GstElement *element, GstStat
       break;
   }
 
-  ret = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
+  ret = GST_ELEMENT_CLASS (sptsmuxer_parent_class)->change_state (element, transition);
 
   return ret;
 }
